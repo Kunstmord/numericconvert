@@ -20,8 +20,7 @@ def insert_string(code: str, index: int, insertion_string: str) -> str:
 
 
 def string_overwrite(code: str, original_len: int, index: int, replacement: str) -> list:
-    res = ''
-    res = res.join(code[:index])
+    res = code[:index]
     replacement_len = len(replacement)
     code_len = len(code)
     offset = replacement_len - original_len
@@ -31,6 +30,12 @@ def string_overwrite(code: str, original_len: int, index: int, replacement: str)
     for i in range(code_len - index - original_len):
         res += code[i + index + original_len]
     return [res, offset]
+
+
+def delete_substring(code: str, start: int, end: int) -> str:
+    res = code[:start]
+    res += code[end:]
+    return res
 
 
 def find_block(code: str, substring: str) -> list:
@@ -131,30 +136,46 @@ def convert_ifs(code: str) -> str:
 
 
 def convert_def(code: str) -> str:
-    function_beginnings = re.finditer(r'def\s+[^\s\n/\\+=-]+\(', code)
+    function_beginnings = re.finditer(r'def(\s+[^\s\n/\\+=-]+\()', code)
     offset = 0
     for function_beginning in function_beginnings:
+        function_beginning_start = function_beginning.start() + offset
         function_beginning_end = function_beginning.end() + offset
+
         function_end = re.search(r'\)', code[function_beginning_end + offset:])
         function_end_pos = function_end.start()
-        code_snippet = re.sub(r'([^\s\n/\\+=-]+)\s*:\s*([^\s\n/\\,+=-]+)', r'\2 \1',
+        code_snippet = re.sub(r'([^\s\n/\\,+=-]+)\s*:\s*([^\s\n/\\,+=-]+)', r'\2 \1',
                               code[function_beginning_end:function_beginning_end + function_end_pos])
         string_over = string_overwrite(code, function_end_pos, function_beginning_end,
                                        code_snippet)
         code = string_over[0]
         offset += string_over[1]
-        code_snippet = re.sub(r'([^\s\n/\\+=-]+)\s*:\s*([^\s\n/\\,+-]+)\s*=\s*([^\s\n/\\+=-]+)', r'\2 \1=\3',
+        code_snippet = re.sub(r'([^\s\n/\\,+=-]+)\s*:\s*([^\s\n/\\,+-]+)\s*=\s*([^\s\n/\\,+=-]+)', r'\2 \1=\3',
                               code[function_beginning_end:function_beginning_end + function_end_pos])
         string_over = string_overwrite(code, function_end_pos, function_beginning_end,
                                        code_snippet)
         code = string_over[0]
         offset += string_over[1]
 
+        ret_type = re.search(r'->(\s*[^\s\n:+=-]+):', code[function_beginning_start:])
+
+        if ret_type:
+            ret_type_str = ret_type.group()
+            ret_type_str = re.sub(r'\s*', r'', ret_type_str)
+            ret_type_str = ret_type_str[:len(ret_type_str) - 1]
+            code = delete_substring(code, function_beginning_start + ret_type.start(), function_beginning_start
+                                    + ret_type.end())
+            offset -= ret_type.end() - ret_type.start()
+
+            code = delete_substring(code, function_beginning_start, function_beginning_start + 3)
+            code = insert_string(code, function_beginning_start, ret_type_str[2:])
+            offset += len(ret_type_str) - 5
+
         for alias in standard_mappings:
             code_snippet = re.sub(alias, standard_mappings[alias],
-                                  code[function_beginning_end:function_beginning_end + function_end_pos])
-            string_over = string_overwrite(code, function_end_pos, function_beginning_end,
-                                           code_snippet)
+                                  code[function_beginning_start:function_beginning_end + function_end_pos])
+            string_over = string_overwrite(code, function_end_pos + function_beginning_end - function_beginning_start,
+                                           function_beginning_start, code_snippet)
             code = string_over[0]
             offset += string_over[1]
     return code
@@ -179,16 +200,16 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     return code
 
 
-a = "def my_big_function(i: int, d: str, f: bool=False) -> int:\n" \
-    "   res = np.exp(-1000.0 - d)\n"\
-    "   for i in range(500):\n" \
-    "       res += 400.0 * i\n"\
-    "   return res\n"\
-    "def my_ff_function(iasdsad: float, d: str, f: bool=True) -> int:\n" \
-    "   res = np.exp(-1000.0 - d)\n"\
-    "   for i in range(500):\n" \
-    "       res += 400.0 * i\n"\
-    "   return res\n"
-print(a, '\n\n')
+a = "def raw_crosssection_diss(g: float, T: float, qq, center_of_mass: bool=True, vl_dependent: int=30) -> str:\n" \
+    "   tau = 1.0\n" \
+    "   for i in range(30):\n" \
+    "       tau += np.log(i)\n" \
+    "   return tau\n"\
+    "def raw_crosssection_diss(g: float, T: float, qq, center_of_mass: bool=True, vl_dependent: int=30) -> str:\n" \
+    "   tau = 1.0\n" \
+    "   for i in range(30):\n" \
+    "       tau += np.log(i)\n" \
+    "   return tau"
+print(a, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
