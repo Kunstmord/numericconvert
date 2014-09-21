@@ -16,6 +16,32 @@ def insert_string(code: str, index: int, insertion_string: str) -> str:
     return res
 
 
+def string_overwrite(code: str, original_len: int, index: int, replacement: str) -> list:
+    res = ''
+    res = res.join(code[:index])
+    replacement_len = len(replacement)
+    code_len = len(code)
+    offset = replacement_len - original_len
+
+    for i in range(replacement_len):
+        res += replacement[i]
+    for i in range(code_len - index - original_len):
+        res += code[i + index + original_len]
+    return [res, offset]
+
+
+def basic_convert(code: str, aliases: dict) -> str:
+    code = convert_fors(code)
+    code = convert_ifs(code)
+
+    code = code.replace('True', 'true')
+    code = code.replace('False', 'false')
+    for alias in aliases:
+        if aliases[alias] == 'scipy':
+            code = code.replace(alias + '.special.gamma', 'tgamma')  # gamma is tgamma in C++
+    return code
+
+
 def find_block(code: str, substring: str) -> list:
     res = []
     index = 0
@@ -106,32 +132,6 @@ def convert_ifs(code: str) -> str:
     code = re.sub(r'if\s+\(not\s+([a-zA-Z0-9_-]+)\)', r'if (!(\1))', code)
     code = re.sub(r'if\s+\((.+)\sis\sFalse\)', r'if (\1 == false)', code)
     code = re.sub(r'if\s+\((.+)\s==\sFalse\)', r'if (\1 == false)', code)
-    return code
-
-
-def string_overwrite(code: str, original_len: int, index: int, replacement: str) -> list:
-    res = ''
-    res = res.join(code[:index])
-    replacement_len = len(replacement)
-    code_len = len(code)
-    offset = replacement_len - original_len
-
-    for i in range(replacement_len):
-        res += replacement[i]
-    for i in range(code_len - index - original_len):
-        res += code[i + index + original_len]
-    return [res, offset]
-
-
-def basic_convert(code: str, aliases: dict) -> str:
-    code = convert_fors(code)
-    code = convert_ifs(code)
-
-    code = code.replace('True', 'true')
-    code = code.replace('False', 'false')
-    for alias in aliases:
-        if aliases[alias] == 'scipy':
-            code = code.replace(alias + '.special.gamma', 'tgamma')  # gamma is tgamma in C++
     return code
 
 
