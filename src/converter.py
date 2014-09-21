@@ -30,18 +30,6 @@ def string_overwrite(code: str, original_len: int, index: int, replacement: str)
     return [res, offset]
 
 
-def basic_convert(code: str, aliases: dict) -> str:
-    code = convert_fors(code)
-    code = convert_ifs(code)
-
-    code = code.replace('True', 'true')
-    code = code.replace('False', 'false')
-    for alias in aliases:
-        if aliases[alias] == 'scipy':
-            code = code.replace(alias + '.special.gamma', 'tgamma')  # gamma is tgamma in C++
-    return code
-
-
 def find_block(code: str, substring: str) -> list:
     res = []
     index = 0
@@ -134,6 +122,17 @@ def convert_ifs(code: str) -> str:
     code = re.sub(r'if\s+\((.+)\s==\sFalse\)', r'if (\1 == false)', code)
     return code
 
+
+def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
+    code = convert_fors(code)
+    code = convert_ifs(code)
+
+    code = code.replace('True', 'true')
+    code = code.replace('False', 'false')
+    for alias in aliases:
+        if aliases[alias] == 'scipy':
+            code = code.replace(alias + '.special.gamma', 'tgamma')  # gamma is tgamma in C++
+    return code
 
 
 a = "for i in range(2000):\n" \
