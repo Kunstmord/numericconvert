@@ -1,6 +1,9 @@
 import re
 
 
+standard_mappings = {r'str': r'std::string', r'float': r'double'}
+
+
 def right_bracket(snippet: str, starting_pos: int) -> str:
     pass
 
@@ -83,7 +86,7 @@ def convert_fors(code: str) -> str:
     if for_blocks:
         offset = 0
         for block in for_blocks:
-            string_to_match = r'for\s+([^\s\n=+/\\]+)\s+in\s+range\((\d+)\):'
+            string_to_match = r'for\s+([^\s\n=+/\\-]+)\s+in\s+range\((\d+)\):'
 
             rem = re.match(string_to_match, code[block[0] + offset:block[1] + offset])
 
@@ -121,15 +124,46 @@ def convert_ifs(code: str) -> str:
                 offset += 1
     code = re.sub(r'if\s+\((.+)\sis\sTrue\)', r'if (\1 == true)', code)
     code = re.sub(r'if\s+\((.+)\s==\sTrue\)', r'if (\1 == true)', code)
-    code = re.sub(r'if\s+\(not\s+([a-zA-Z0-9_-]+)\)', r'if (!(\1))', code)
+    code = re.sub(r'if\s+\(not\s+([a-zA-Z0-9_]+)\)', r'if (!(\1))', code)
     code = re.sub(r'if\s+\((.+)\sis\sFalse\)', r'if (\1 == false)', code)
     code = re.sub(r'if\s+\((.+)\s==\sFalse\)', r'if (\1 == false)', code)
+    return code
+
+
+def convert_def(code: str) -> str:
+    function_beginnings = re.finditer(r'def\s+[^\s\n/\\+=-]+\(', code)
+    offset = 0
+    for function_beginning in function_beginnings:
+        function_beginning_end = function_beginning.end() + offset
+        function_end = re.search(r'\)', code[function_beginning_end + offset:])
+        function_end_pos = function_end.start()
+        code_snippet = re.sub(r'([^\s\n/\\+=-]+)\s*:\s*([^\s\n/\\,+=-]+)', r'\2 \1',
+                              code[function_beginning_end:function_beginning_end + function_end_pos])
+        string_over = string_overwrite(code, function_end_pos, function_beginning_end,
+                                       code_snippet)
+        code = string_over[0]
+        offset += string_over[1]
+        code_snippet = re.sub(r'([^\s\n/\\+=-]+)\s*:\s*([^\s\n/\\,+-]+)\s*=\s*([^\s\n/\\+=-]+)', r'\2 \1=\3',
+                              code[function_beginning_end:function_beginning_end + function_end_pos])
+        string_over = string_overwrite(code, function_end_pos, function_beginning_end,
+                                       code_snippet)
+        code = string_over[0]
+        offset += string_over[1]
+
+        for alias in standard_mappings:
+            code_snippet = re.sub(alias, standard_mappings[alias],
+                                  code[function_beginning_end:function_beginning_end + function_end_pos])
+            string_over = string_overwrite(code, function_end_pos, function_beginning_end,
+                                           code_snippet)
+            code = string_over[0]
+            offset += string_over[1]
     return code
 
 
 def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     code = re.sub(r'\\\s*\n\s*', ' ', code)
 
+    code = convert_def(code)
     code = convert_fors(code)
     code = convert_ifs(code)
 
@@ -137,21 +171,24 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     code = code.replace('False', 'false')
     for alias in aliases:
         if aliases[alias] == 'scipy':
-            code = code.replace(alias + '.special.gamma', 'tgamma')  # gamma is tgamma in C++
+            code = code.replace(alias + '.special.gamma', 'tgamma')  # gamma is tgamma in C++  # custom function names here
+
+    for alias in aliases:
+        code = code.replace(alias + '.', '')
+
     return code
 
 
-a = "for i in range(2000):\n" \
-    "  tmp += 80 * i\n\n" \
-    "if not tmp and k == True:\n" \
-    "   for q in range(400):\n" \
-    "       ttmp = 40 *\ \n" \
-    "           340 - 30i\n"\
-    "   tmp += 80 * i\n\n" \
-    "if not tmp and k == True:\n" \
-    "   for q in range(400):\n" \
-    "       ttmp = 40 *\ \n" \
-    "           340 - 30i"
+a = "def my_big_function(i: int, d: str, f: bool=False) -> int:\n" \
+    "   res = np.exp(-1000.0 - d)\n"\
+    "   for i in range(500):\n" \
+    "       res += 400.0 * i\n"\
+    "   return res\n"\
+    "def my_ff_function(iasdsad: float, d: str, f: bool=True) -> int:\n" \
+    "   res = np.exp(-1000.0 - d)\n"\
+    "   for i in range(500):\n" \
+    "       res += 400.0 * i\n"\
+    "   return res\n"
 print(a, '\n\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
