@@ -83,10 +83,12 @@ def convert_fors(code: str) -> str:
     if for_blocks:
         offset = 0
         for block in for_blocks:
-            rem = re.match(r'for\s+([^\s\n=+/\\]+)\s+in\s+range\((\d+)\):', code[block[0] + offset:block[1] + offset])
+            string_to_match = r'for\s+([^\s\n=+/\\]+)\s+in\s+range\((\d+)\):'
+
+            rem = re.match(string_to_match, code[block[0] + offset:block[1] + offset])
 
             if rem:
-                code_substr = re.sub(r'for\s+([^\s\n=+/\\]+)\s+in\s+range\((\d+)\):', r'for (\1=0; \1<\2; \1++) {',
+                code_substr = re.sub(string_to_match, r'for (\1=0; \1<\2; \1++) {',
                                      code[block[0] + offset + rem.start():block[0] + offset + rem.end() + 1])
                 string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset, code_substr)
                 offset += string_over[1]
@@ -103,10 +105,12 @@ def convert_ifs(code: str) -> str:
     if if_blocks:
         offset = 0
         for block in if_blocks:
-            rem = re.match(r'if\s+(.+)\s*:', code[block[0] + offset:block[1] + offset])
+            string_to_match = r'if\s+(.+)\s*:'
+
+            rem = re.match(string_to_match, code[block[0] + offset:block[1] + offset])
 
             if rem:
-                code_substr = re.sub(r'if\s+(.+)\s*:', r'if (\1) {',
+                code_substr = re.sub(string_to_match, r'if (\1) {',
                                      code[block[0] + offset + rem.start():block[0] + offset + rem.end() + 1])
                 string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset, code_substr)
                 offset += string_over[1]
@@ -124,6 +128,8 @@ def convert_ifs(code: str) -> str:
 
 
 def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
+    code = re.sub(r'\\\s*\n\s*', ' ', code)
+
     code = convert_fors(code)
     code = convert_ifs(code)
 
@@ -140,8 +146,8 @@ a = "for i in range(2000):\n" \
     "if not tmp and k == True:\n" \
     "   for q in range(400):\n" \
     "       ttmp = 40 *\ \n" \
-    "           340 - 30i"\
-    "  tmp += 80 * i\n\n" \
+    "           340 - 30i\n"\
+    "   tmp += 80 * i\n\n" \
     "if not tmp and k == True:\n" \
     "   for q in range(400):\n" \
     "       ttmp = 40 *\ \n" \
