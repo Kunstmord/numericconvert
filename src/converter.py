@@ -1,4 +1,5 @@
 import re
+import queue
 
 
 standard_mappings = {r'str': r'std::string', r'float': r'double'}
@@ -51,8 +52,8 @@ def find_block(code: str, substring: str) -> list:
                 block_indent = 0
                 curr_pos = substr_index - 1
                 while code[curr_pos] == ' ' and curr_pos >= 0:
-                    curr_pos -= 1
                     block_indent += 1
+                    curr_pos -= 1
             else:
                 block_indent = 0
             next_newline = code.find('\n', start_pos)
@@ -82,6 +83,36 @@ def find_block(code: str, substring: str) -> list:
     return res
 
 
+def find_all_blocks(code: str, substring: str) -> list:
+    unchecked_blocks = queue.Queue()
+    base_blocks = find_block(code, substring)
+    res = []
+    substring_len = len(substring)
+    if base_blocks:
+        for base_block in base_blocks:
+            unchecked_blocks.put(base_block)
+            res.append(base_block)
+        while not unchecked_blocks.empty():
+            tmp_block = unchecked_blocks.get()
+            start_pos = tmp_block[0]
+            tmp_block = code[tmp_block[0] + substring_len + tmp_block[2]:]
+            new_blocks = find_block(tmp_block, substring)
+            if new_blocks:
+                for new_block in new_blocks:
+                    offset_new_block = new_block.copy()
+                    offset_new_block[0] += start_pos
+                    offset_new_block[2] += new_block[2]
+                    unchecked_blocks.put(offset_new_block)
+                    res.append(offset_new_block)
+        for block in res:
+            while not code[block[0]:].startswith(substring):
+                block[0] += 1
+                block[1] += 1
+        return res
+    else:
+        return None
+
+
 def add_semicolons(code: str) -> str:
     pass
 
@@ -109,25 +140,32 @@ def convert_fors(code: str) -> str:
 
 
 def convert_ifs(code: str) -> str:
-    if_blocks = find_block(code, 'if ')
+    if_blocks = find_all_blocks(code, 'if ')
+    print(if_blocks)
+    for block in if_blocks:
+        print(code[block[0]:])
     if if_blocks:
         offset = 0
+        if_blocks.reverse()
         for block in if_blocks:
             string_to_match = r'if\s+(.+)\s*:'
-
-            rem = re.match(string_to_match, code[block[0] + offset:block[1] + offset])
+            # offset = 0
+            rem = re.match(string_to_match, code[block[0]:block[1] + offset])
 
             if rem:
+                # offset = 0
                 code_substr = re.sub(string_to_match, r'if (\1) {',
-                                     code[block[0] + offset + rem.start():block[0] + offset + rem.end() + 1])
-                string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset,
+                                     code[block[0] + rem.start():block[0] + rem.end() + 1],
+                                     count=1)
+                string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0],
                                                code_substr)
                 offset += string_over[1]
 
                 code = string_over[0]
-                code = insert_string(code, block[1] + offset, '\n}')
+                code = insert_string(code, block[1] + offset, '\n' + ' ' * block[2] + '}')
                 code = code.replace('{\n\n', '{\n')
                 offset += 1
+                offset += block[2]
     code = re.sub(r'if\s+\((.+)\sis\sTrue\)', r'if (\1 == true)', code)
     code = re.sub(r'if\s+\((.+)\s==\sTrue\)', r'if (\1 == true)', code)
     code = re.sub(r'if\s+\(not\s+([a-zA-Z0-9_]+)\)', r'if (!(\1))', code)
@@ -248,11 +286,11 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
 
     return code
 
+# vl_dependent = false
 
-a = "if rig_sphere and fdd:\n"\
-    "   return raw_crosssection_rigid_sphere(idata[1])\n"\
-    "else:\n"\
-    "   return raw_crosssection_VSS(g, T, idata[9], idata[10])"
+a = "if vl_dependent:\n"\
+    "    if center_of_mass:\n"\
+    "        return 340"
 print(a, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
