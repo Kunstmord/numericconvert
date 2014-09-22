@@ -95,7 +95,7 @@ def find_all_blocks(code: str, substring: str) -> list:
         while not unchecked_blocks.empty():
             tmp_block = unchecked_blocks.get()
             start_pos = tmp_block[0]
-            tmp_block = code[tmp_block[0] + substring_len + tmp_block[2]:]
+            tmp_block = code[tmp_block[0] + substring_len + tmp_block[2]:tmp_block[1]]
             new_blocks = find_block(tmp_block, substring)
             if new_blocks:
                 for new_block in new_blocks:
@@ -265,9 +265,10 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
 # vl_dependent = false
 
 a = "if vl_dependent:\n"\
-    "    if center_of_mass:\n"\
-    "        if 12345:\n"\
-    "            return 34000"
+    "    print(f)\n"\
+    "if center_of_mass:\n"\
+    "    if 12345:\n"\
+    "        return 34000"
 print(a, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
