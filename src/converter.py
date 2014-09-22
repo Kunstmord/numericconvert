@@ -101,7 +101,7 @@ def find_all_blocks(code: str, substring: str) -> list:
                 for new_block in new_blocks:
                     offset_new_block = new_block.copy()
                     offset_new_block[0] += start_pos
-                    offset_new_block[2] += new_block[2]
+                    offset_new_block[1] += start_pos
                     unchecked_blocks.put(offset_new_block)
                     res.append(offset_new_block)
         for block in res:
@@ -266,7 +266,8 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
 
 a = "if vl_dependent:\n"\
     "    if center_of_mass:\n"\
-    "        return 340"
+    "        if 12345:\n"\
+    "            return 34000"
 print(a, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
