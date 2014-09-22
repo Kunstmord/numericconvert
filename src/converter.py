@@ -120,7 +120,8 @@ def convert_ifs(code: str) -> str:
             if rem:
                 code_substr = re.sub(string_to_match, r'if (\1) {',
                                      code[block[0] + offset + rem.start():block[0] + offset + rem.end() + 1])
-                string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset, code_substr)
+                string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset,
+                                               code_substr)
                 offset += string_over[1]
 
                 code = string_over[0]
@@ -132,6 +133,53 @@ def convert_ifs(code: str) -> str:
     code = re.sub(r'if\s+\(not\s+([a-zA-Z0-9_]+)\)', r'if (!(\1))', code)
     code = re.sub(r'if\s+\((.+)\sis\sFalse\)', r'if (\1 == false)', code)
     code = re.sub(r'if\s+\((.+)\s==\sFalse\)', r'if (\1 == false)', code)
+    return code
+
+
+def convert_elses(code: str) -> str:
+    if_blocks = find_block(code, 'else ')
+    if if_blocks:
+        offset = 0
+        for block in if_blocks:
+            string_to_match = r'else\s*:'
+
+            rem = re.match(string_to_match, code[block[0] + offset:block[1] + offset])
+
+            if rem:
+                code_substr = re.sub(string_to_match, r'else {',
+                                     code[block[0] + offset + rem.start():block[0] + offset + rem.end() + 1])
+                string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset,
+                                               code_substr)
+                offset += string_over[1]
+
+                code = string_over[0]
+                code = insert_string(code, block[1] + offset, '\n}')
+                code = code.replace('{\n\n', '{\n')
+                offset += 1
+    if_blocks = find_block(code, 'else:')
+    if if_blocks:
+        offset = 0
+        for block in if_blocks:
+            string_to_match = r'else:'
+
+            rem = re.match(string_to_match, code[block[0] + offset:block[1] + offset])
+
+            if rem:
+                code_substr = re.sub(string_to_match, r'else {',
+                                     code[block[0] + offset + rem.start():block[0] + offset + rem.end() + 1])
+                string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset,
+                                               code_substr)
+                offset += string_over[1]
+
+                code = string_over[0]
+                code = insert_string(code, block[1] + offset, '\n}')
+                code = code.replace('{\n\n', '{\n')
+                offset += 1
+    # code = re.sub(r'if\s+\((.+)\sis\sTrue\)', r'if (\1 == true)', code)
+    # code = re.sub(r'if\s+\((.+)\s==\sTrue\)', r'if (\1 == true)', code)
+    # code = re.sub(r'if\s+\(not\s+([a-zA-Z0-9_]+)\)', r'if (!(\1))', code)
+    # code = re.sub(r'if\s+\((.+)\sis\sFalse\)', r'if (\1 == false)', code)
+    # code = re.sub(r'if\s+\((.+)\s==\sFalse\)', r'if (\1 == false)', code)
     return code
 
 
@@ -187,6 +235,7 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     code = convert_def(code)
     code = convert_fors(code)
     code = convert_ifs(code)
+    code = convert_elses(code)
 
     code = code.replace('True', 'true')
     code = code.replace('False', 'false')
@@ -200,16 +249,10 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     return code
 
 
-a = "def raw_crosssection_diss(g: float, T: float, qq, center_of_mass: bool=True, vl_dependent: int=30) -> str:\n" \
-    "   tau = 1.0\n" \
-    "   for i in range(30):\n" \
-    "       tau += np.log(i)\n" \
-    "   return tau\n"\
-    "def raw_crosssection_diss(g: float, T: float, qq, center_of_mass: bool=True, vl_dependent: int=30) -> str:\n" \
-    "   tau = 1.0\n" \
-    "   for i in range(30):\n" \
-    "       tau += np.log(i)\n" \
-    "   return tau"
+a = "if rig_sphere and fdd:\n"\
+    "   return raw_crosssection_rigid_sphere(idata[1])\n"\
+    "else:\n"\
+    "   return raw_crosssection_VSS(g, T, idata[9], idata[10])"
 print(a, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
