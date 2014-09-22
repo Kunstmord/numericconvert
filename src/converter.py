@@ -141,19 +141,14 @@ def convert_fors(code: str) -> str:
 
 def convert_ifs(code: str) -> str:
     if_blocks = find_all_blocks(code, 'if ')
-    print(if_blocks)
-    for block in if_blocks:
-        print(code[block[0]:])
     if if_blocks:
         offset = 0
         if_blocks.reverse()
         for block in if_blocks:
             string_to_match = r'if\s+(.+)\s*:'
-            # offset = 0
             rem = re.match(string_to_match, code[block[0]:block[1] + offset])
 
             if rem:
-                # offset = 0
                 code_substr = re.sub(string_to_match, r'if (\1) {',
                                      code[block[0] + rem.start():block[0] + rem.end() + 1],
                                      count=1)
