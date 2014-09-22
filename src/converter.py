@@ -194,25 +194,6 @@ def convert_elses(code: str) -> str:
                 code = insert_string(code, block[1] + offset, '\n}')
                 code = code.replace('{\n\n', '{\n')
                 offset += 1
-    if_blocks = find_block(code, 'else:')
-    if if_blocks:
-        offset = 0
-        for block in if_blocks:
-            string_to_match = r'else:'
-
-            rem = re.match(string_to_match, code[block[0] + offset:block[1] + offset])
-
-            if rem:
-                code_substr = re.sub(string_to_match, r'else {',
-                                     code[block[0] + offset + rem.start():block[0] + offset + rem.end() + 1])
-                string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset,
-                                               code_substr)
-                offset += string_over[1]
-
-                code = string_over[0]
-                code = insert_string(code, block[1] + offset, '\n}')
-                code = code.replace('{\n\n', '{\n')
-                offset += 1
     # code = re.sub(r'if\s+\((.+)\sis\sTrue\)', r'if (\1 == true)', code)
     # code = re.sub(r'if\s+\((.+)\s==\sTrue\)', r'if (\1 == true)', code)
     # code = re.sub(r'if\s+\(not\s+([a-zA-Z0-9_]+)\)', r'if (!(\1))', code)
