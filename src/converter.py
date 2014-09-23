@@ -44,7 +44,6 @@ def find_block(code: str, substring: str) -> list:
     index = 0
     code_len = len(code)
     while index < code_len:
-
         substr_index = code.find(substring, index)
         if substr_index != -1:
             start_pos = substr_index
@@ -95,7 +94,7 @@ def find_all_blocks(code: str, substring: str) -> list:
         while not unchecked_blocks.empty():
             tmp_block = unchecked_blocks.get()
             start_pos = tmp_block[0]
-            tmp_block = code[tmp_block[0] + substring_len + tmp_block[2]:tmp_block[1]]
+            tmp_block = code[tmp_block[0] + substring_len + tmp_block[2]:tmp_block[1] + tmp_block[2]]
             new_blocks = find_block(tmp_block, substring)
             if new_blocks:
                 for new_block in new_blocks:
@@ -108,6 +107,7 @@ def find_all_blocks(code: str, substring: str) -> list:
             while not code[block[0]:].startswith(substring):
                 block[0] += 1
                 block[1] += 1
+        res.sort(key=lambda x: x[0])
         return res
     else:
         return None
@@ -117,50 +117,65 @@ def add_semicolons(code: str) -> str:
     pass
 
 
-def convert_fors(code: str) -> str:
-    for_blocks = find_block(code, 'for ')
-    if for_blocks:
-        offset = 0
-        for block in for_blocks:
-            string_to_match = r'for\s+([^\s\n=+/\\-]+)\s+in\s+range\((\d+)\):'
+def add_hierarchy(code_blocks: list) -> list:
+    min_indent = None
+    code_blocks_amt = len(code_blocks)
 
-            rem = re.match(string_to_match, code[block[0] + offset:block[1] + offset])
+    for block in code_blocks:
+        if min_indent is None or min_indent > block[2]:
+            min_indent = block[2]
+    for block in enumerate(reversed(code_blocks)):
+        if block[1][2] > min_indent:
+            cursor_pos = code_blocks_amt - block[0]
+            found_parent = False
+            while cursor_pos > 0 and not found_parent:
+                cursor_pos -= 1
+                if code_blocks[cursor_pos][2] < block[1][2]:
+                    code_blocks[code_blocks_amt - block[0] - 1].append(cursor_pos)
+                    found_parent = True
 
+
+def convert_constructs(code: str, construct: str, string_to_match: str, replacement_string: str) -> str:
+    construct_blocks = find_all_blocks(code, construct + ' ')
+    if construct_blocks:
+        add_hierarchy(construct_blocks)
+        construct_blocks.reverse()
+        blocks_amt = len(construct_blocks)
+        for block in construct_blocks:
+
+            fixit_re = re.search(r'\n\s*$', code[block[0]: block[1]])
+            if fixit_re:
+                end_bracket_insertion_position = block[0] + fixit_re.start()
+                print('ssssstarting', code[end_bracket_insertion_position])
+            else:
+                end_bracket_insertion_position = block[1]
+            rem = re.match(string_to_match, code[block[0]:block[1]])
+            print('-----------------\n' + code[block[0]:end_bracket_insertion_position] + '\n==============\n')
             if rem:
-                code_substr = re.sub(string_to_match, r'for (\1=0; \1<\2; \1++) {',
-                                     code[block[0] + offset + rem.start():block[0] + offset + rem.end() + 1])
-                string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset, code_substr)
-                offset += string_over[1]
-
-                code = string_over[0]
-                code = insert_string(code, block[1] + offset, '\n' + ' ' * block[2] + '}')
-                code = code.replace('{\n\n', '{\n')
-                offset += 1 + block[2]
-    return code
-
-
-def convert_ifs(code: str) -> str:
-    if_blocks = find_all_blocks(code, 'if ')
-    if if_blocks:
-        offset = 0
-        if_blocks.reverse()
-        for block in if_blocks:
-            string_to_match = r'if\s+(.+)\s*:'
-            rem = re.match(string_to_match, code[block[0]:block[1] + offset])
-
-            if rem:
-                code_substr = re.sub(string_to_match, r'if (\1) {',
+                code = insert_string(code, end_bracket_insertion_position, '\n' + ' ' * block[2] + '}')
+                code_substr = re.sub(string_to_match, replacement_string,
                                      code[block[0] + rem.start():block[0] + rem.end() + 1],
                                      count=1)
                 string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0],
                                                code_substr)
-                offset += string_over[1]
+
+                if len(block) == 4:
+                    parent_block_id = block[3]
+                    construct_blocks[blocks_amt - parent_block_id - 1][1] += string_over[1] + 1 + block[2]
 
                 code = string_over[0]
-                code = insert_string(code, block[1] + offset, '\n' + ' ' * block[2] + '}')
                 code = code.replace('{\n\n', '{\n')
-                offset += 1
-                offset += block[2]
+                print(code)
+    return code
+
+
+def convert_fors(code: str) -> str:
+    return convert_constructs(code, 'for', r'for\s+([^\s\n=+/\\-]+)\s+in\s+range\((\d+)\):',
+                              r'for (\1=0; \1<\2; \1++) {')
+
+
+def convert_ifs(code: str) -> str:
+    code = convert_constructs(code, 'if', r'if\s+(.+)\s*:', r'if (\1) {')
     code = re.sub(r'if\s+\((.+)\sis\sTrue\)', r'if (\1 == true)', code)
     code = re.sub(r'if\s+\((.+)\s==\sTrue\)', r'if (\1 == true)', code)
     code = re.sub(r'if\s+\(not\s+([a-zA-Z0-9_]+)\)', r'if (!(\1))', code)
@@ -189,15 +204,10 @@ def convert_elses(code: str) -> str:
                 code = insert_string(code, block[1] + offset, '\n}')
                 code = code.replace('{\n\n', '{\n')
                 offset += 1
-    # code = re.sub(r'if\s+\((.+)\sis\sTrue\)', r'if (\1 == true)', code)
-    # code = re.sub(r'if\s+\((.+)\s==\sTrue\)', r'if (\1 == true)', code)
-    # code = re.sub(r'if\s+\(not\s+([a-zA-Z0-9_]+)\)', r'if (!(\1))', code)
-    # code = re.sub(r'if\s+\((.+)\sis\sFalse\)', r'if (\1 == false)', code)
-    # code = re.sub(r'if\s+\((.+)\s==\sFalse\)', r'if (\1 == false)', code)
     return code
 
 
-def convert_def(code: str) -> str:
+def convert_defs(code: str) -> str:
     function_beginnings = re.finditer(r'def(\s+[^\s\n/\\+=-]+\()', code)
     offset = 0
     for function_beginning in function_beginnings:
@@ -246,7 +256,7 @@ def convert_def(code: str) -> str:
 def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     code = re.sub(r'\\\s*\n\s*', ' ', code)
 
-    code = convert_def(code)
+    code = convert_defs(code)
     code = convert_fors(code)
     code = convert_ifs(code)
     code = convert_elses(code)
@@ -264,11 +274,19 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
 
 # vl_dependent = false
 
-a = "if vl_dependent:\n"\
+a = "if vl_dependentasdsd:\n"\
     "    print(f)\n"\
-    "if center_of_mass:\n"\
     "    if 12345:\n"\
-    "        return 34000"
+    "        tmp -= 340000000\n"\
+    "        if failurtestingnoaaswatm:\n"\
+    "            z *= 5000\n"\
+    "            mydef = np.log(33333330)\n"\
+    "            if not thissss:\n"\
+    "                myabstractionfails\n"\
+    "if tmp > 23:\n"\
+    "    print('qqq')\n"\
+    "if dd < qdd:\n"\
+    "    tmp *= np.log(20)"
 print(a, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
