@@ -131,12 +131,12 @@ def add_hierarchy(code_blocks: list) -> list:
                     found_parent = True
 
 
-def convert_constructs(code: str, construct: str, string_to_match: str, replacement_string: str) -> str:
-    construct_blocks = find_all_blocks(code, construct + ' ')
+def convert_constructs(code: str, construct_blocks: list, string_to_match: str, replacement_string: str) -> str:
+    # construct_blocks = find_all_blocks(code, construct + ' ')
     if construct_blocks:
-        for block in construct_blocks:
-            print(code[block[0]:block[1]])
-        add_hierarchy(construct_blocks)
+        # for block in construct_blocks:
+        #     print(code[block[0]:block[1]])
+        # add_hierarchy(construct_blocks)
         construct_blocks.reverse()
         blocks_amt = len(construct_blocks)
         for block in construct_blocks:
@@ -169,13 +169,13 @@ def convert_constructs(code: str, construct: str, string_to_match: str, replacem
     return code
 
 
-def convert_fors(code: str) -> str:
-    return convert_constructs(code, 'for', r'for\s+([^\s\n=+/\\-]+)\s+in\s+range\((\d+)\):',
+def convert_fors(code: str, for_blocks: list) -> str:
+    return convert_constructs(code, for_blocks, r'for\s+([^\s\n=+/\\-]+)\s+in\s+range\((\d+)\):',
                               r'for (\1=0; \1<\2; \1++) {')
 
 
-def convert_ifs(code: str) -> str:
-    code = convert_constructs(code, 'if', r'if\s+(.+)\s*:', r'if (\1) {')
+def convert_ifs(code: str, if_blocks: list) -> str:
+    code = convert_constructs(code, if_blocks, r'if\s+(.+)\s*:', r'if (\1) {')
     code = re.sub(r'if\s+\((.+)\sis\sTrue\)', r'if (\1 == true)', code)
     code = re.sub(r'if\s+\((.+)\s==\sTrue\)', r'if (\1 == true)', code)
     code = re.sub(r'if\s+\(not\s+([a-zA-Z0-9_]+)\)', r'if (!(\1))', code)
@@ -184,27 +184,27 @@ def convert_ifs(code: str) -> str:
     return code
 
 
-def convert_elses(code: str) -> str:
-    if_blocks = find_block(code, 'else ')
-    if if_blocks:
-        offset = 0
-        for block in if_blocks:
-            string_to_match = r'else\s*:'
-
-            rem = re.match(string_to_match, code[block[0] + offset:block[1] + offset])
-
-            if rem:
-                code_substr = re.sub(string_to_match, r'else {',
-                                     code[block[0] + offset + rem.start():block[0] + offset + rem.end() + 1])
-                string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset,
-                                               code_substr)
-                offset += string_over[1]
-
-                code = string_over[0]
-                code = insert_string(code, block[1] + offset, '\n}')
-                code = code.replace('{\n\n', '{\n')
-                offset += 1
-    return code
+# def convert_elses(code: str) -> str:
+#     if_blocks = find_block(code, 'else ')
+#     if if_blocks:
+#         offset = 0
+#         for block in if_blocks:
+#             string_to_match = r'else\s*:'
+#
+#             rem = re.match(string_to_match, code[block[0] + offset:block[1] + offset])
+#
+#             if rem:
+#                 code_substr = re.sub(string_to_match, r'else {',
+#                                      code[block[0] + offset + rem.start():block[0] + offset + rem.end() + 1])
+#                 string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset,
+#                                                code_substr)
+#                 offset += string_over[1]
+#
+#                 code = string_over[0]
+#                 code = insert_string(code, block[1] + offset, '\n}')
+#                 code = code.replace('{\n\n', '{\n')
+#                 offset += 1
+#     return code
 
 
 def convert_defs(code: str) -> str:
@@ -266,13 +266,62 @@ def add_semicolons(code: str) -> str:
     return res
 
 
+def this_might_be_the_worst_crutch_every(these_blocks: list, those_blocks: list) -> list:
+    blocks_amt = len(these_blocks)
+    for block in enumerate(reversed(these_blocks)):
+        if block[1][3] != -1:
+            parent_block_id = block[1][3]
+
+            parent_block = these_blocks[blocks_amt - parent_block_id - 1]
+            parent_start = parent_block[0]
+            parent_offset = parent_block[2]
+            for that_block_blocks in those_blocks:
+                for that_block in that_block_blocks:
+                    if block[1][0] > that_block[0] > parent_start and that_block[1] > block[1][1]\
+                            and that_block[2] <= parent_offset:
+                        these_blocks[blocks_amt - block[0] - 1][3] = -1
+
+    return these_blocks
+
+
 def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     code = re.sub(r'\\\s*\n\s*', ' ', code)
 
+    if_blocks = find_all_blocks(code, 'if ')
+    add_hierarchy(if_blocks)
+    for_blocks = find_all_blocks(code, 'for ')
+    add_hierarchy(for_blocks)
+
+    # blocks_amt = len(if_blocks)
+    #
+    # for block in if_blocks:
+    #     print(block[3])
+    #
+    # for block in enumerate(reversed(if_blocks)):
+    #     if block[1][3] != -1:
+    #         parent_block_id = block[1][3]
+    #
+    #         parent_block = if_blocks[blocks_amt - parent_block_id - 1]
+    #         parent_start = parent_block[0]
+    #         parent_offset = parent_block[2]
+    #         for secondary_block in for_blocks:
+    #             if block[1][0] > secondary_block[0] > parent_start and secondary_block[1] > block[1][1] and secondary_block[2] <= parent_offset:
+    #                 if_blocks[blocks_amt - block[0] - 1][3] = -1
+    #
+    # print('-----------')
+    #
+    # for block in if_blocks:
+    #     print(block[3])
+
+    if_blocks = this_might_be_the_worst_crutch_every(if_blocks, [for_blocks])
+
     code = convert_defs(code)
-    code = convert_ifs(code)
-    code = convert_fors(code)
-    code = convert_elses(code)
+    code = convert_ifs(code, if_blocks)
+    for_blocks = find_all_blocks(code, 'for ')
+    add_hierarchy(for_blocks)
+    code = convert_fors(code, for_blocks)
+
+    # code = convert_elses(code)
 
     code = code.replace('True', 'true')
     code = code.replace('False', 'false')
@@ -297,10 +346,9 @@ a = "if vl_dependentasdsd:\n"\
     "            Acapulco niceties\n"\
     "if tmp > 23:\n"\
     "    print('qqq')\n"\
-    "if dd < qdd:\n"\
-    "    tmp *= np.log(20)\n"\
     "for i in range(40000):\n"\
-    "    question remains\n"\
+    "    if dau > tau:\n"\
+    "        never even start\n"\
     "    for nottobe in range(600):\n"\
     "        where does it end"
 print(a, '\n')
