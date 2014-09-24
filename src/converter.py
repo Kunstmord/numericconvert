@@ -57,7 +57,7 @@ def find_block(code: str, substring: str) -> list:
                 block_indent = 0
             next_newline = code.find('\n', start_pos)
             if next_newline == -1 or next_newline == code_len - 1:
-                res.append([start_pos, len(code), block_indent])  # start position, end position
+                res.append([start_pos, len(code), block_indent, -1])  # start position, end position
                 index = code_len
             else:
                 flag = True
@@ -69,12 +69,12 @@ def find_block(code: str, substring: str) -> list:
                         curr_indent += 1
                     if curr_indent <= block_indent:
                         flag = False
-                        res.append([start_pos, next_newline, block_indent])
+                        res.append([start_pos, next_newline, block_indent, -1])
                         index = next_newline + 1
                     else:
                         next_newline = code.find('\n', curr_pos)
                         if next_newline == -1 or next_newline == code_len - 1:
-                            res.append([start_pos, len(code), block_indent])  # start position, end position
+                            res.append([start_pos, len(code), block_indent, -1])  # start position, end position
                             index = code_len
                             flag = False
         else:
@@ -127,13 +127,15 @@ def add_hierarchy(code_blocks: list) -> list:
             while cursor_pos > 0 and not found_parent:
                 cursor_pos -= 1
                 if code_blocks[cursor_pos][2] < block[1][2]:
-                    code_blocks[code_blocks_amt - block[0] - 1].append(cursor_pos)
+                    code_blocks[code_blocks_amt - block[0] - 1][3] = cursor_pos
                     found_parent = True
 
 
 def convert_constructs(code: str, construct: str, string_to_match: str, replacement_string: str) -> str:
     construct_blocks = find_all_blocks(code, construct + ' ')
     if construct_blocks:
+        for block in construct_blocks:
+            print(code[block[0]:block[1]])
         add_hierarchy(construct_blocks)
         construct_blocks.reverse()
         blocks_amt = len(construct_blocks)
@@ -153,12 +155,12 @@ def convert_constructs(code: str, construct: str, string_to_match: str, replacem
                 string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0],
                                                code_substr)
 
-                if len(block) == 4:
+                if block[3] != -1:
                     parent_block_id = block[3]
                     flag = True
                     while flag:
                         construct_blocks[blocks_amt - parent_block_id - 1][1] += string_over[1] + 1 + block[2]
-                        if len(construct_blocks[blocks_amt - parent_block_id - 1]) != 4:
+                        if construct_blocks[blocks_amt - parent_block_id - 1][3] == -1:
                             flag = False
                         else:
                             parent_block_id = construct_blocks[blocks_amt - parent_block_id - 1][3]
