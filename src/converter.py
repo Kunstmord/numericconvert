@@ -113,10 +113,6 @@ def find_all_blocks(code: str, substring: str) -> list:
         return None
 
 
-def add_semicolons(code: str) -> str:
-    pass
-
-
 def add_hierarchy(code_blocks: list) -> list:
     min_indent = None
     code_blocks_amt = len(code_blocks)
@@ -146,11 +142,9 @@ def convert_constructs(code: str, construct: str, string_to_match: str, replacem
             fixit_re = re.search(r'\n\s*$', code[block[0]: block[1]])
             if fixit_re:
                 end_bracket_insertion_position = block[0] + fixit_re.start()
-                print('ssssstarting', code[end_bracket_insertion_position])
             else:
                 end_bracket_insertion_position = block[1]
             rem = re.match(string_to_match, code[block[0]:block[1]])
-            print('-----------------\n' + code[block[0]:end_bracket_insertion_position] + '\n==============\n')
             if rem:
                 code = insert_string(code, end_bracket_insertion_position, '\n' + ' ' * block[2] + '}')
                 code_substr = re.sub(string_to_match, replacement_string,
@@ -161,11 +155,15 @@ def convert_constructs(code: str, construct: str, string_to_match: str, replacem
 
                 if len(block) == 4:
                     parent_block_id = block[3]
-                    construct_blocks[blocks_amt - parent_block_id - 1][1] += string_over[1] + 1 + block[2]
-
+                    flag = True
+                    while flag:
+                        construct_blocks[blocks_amt - parent_block_id - 1][1] += string_over[1] + 1 + block[2]
+                        if len(construct_blocks[blocks_amt - parent_block_id - 1]) != 4:
+                            flag = False
+                        else:
+                            parent_block_id = construct_blocks[blocks_amt - parent_block_id - 1][3]
                 code = string_over[0]
                 code = code.replace('{\n\n', '{\n')
-                print(code)
     return code
 
 
@@ -253,12 +251,25 @@ def convert_defs(code: str) -> str:
     return code
 
 
+def add_semicolons(code: str) -> str:
+    res = ''
+    code_list = code.split('\n')
+    for code_string in code_list:
+        if not (code_string.endswith('}') or code_string.endswith('{')):
+            res += code_string + ';\n'
+        else:
+            res += code_string + '\n'
+    if res.endswith('\n'):
+        res = res[:len(res) - 1]
+    return res
+
+
 def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     code = re.sub(r'\\\s*\n\s*', ' ', code)
 
     code = convert_defs(code)
-    code = convert_fors(code)
     code = convert_ifs(code)
+    code = convert_fors(code)
     code = convert_elses(code)
 
     code = code.replace('True', 'true')
@@ -269,10 +280,8 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
 
     for alias in aliases:
         code = code.replace(alias + '.', '')
-
+    code = add_semicolons(code)
     return code
-
-# vl_dependent = false
 
 a = "if vl_dependentasdsd:\n"\
     "    print(f)\n"\
@@ -283,10 +292,15 @@ a = "if vl_dependentasdsd:\n"\
     "            mydef = np.log(33333330)\n"\
     "            if not thissss:\n"\
     "                myabstractionfails\n"\
+    "            Acapulco niceties\n"\
     "if tmp > 23:\n"\
     "    print('qqq')\n"\
     "if dd < qdd:\n"\
-    "    tmp *= np.log(20)"
+    "    tmp *= np.log(20)\n"\
+    "for i in range(40000):\n"\
+    "    question remains\n"\
+    "    for nottobe in range(600):\n"\
+    "        where does it end"
 print(a, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
