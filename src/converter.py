@@ -184,27 +184,8 @@ def convert_ifs(code: str, if_blocks: list) -> str:
     return code
 
 
-# def convert_elses(code: str) -> str:
-#     if_blocks = find_block(code, 'else ')
-#     if if_blocks:
-#         offset = 0
-#         for block in if_blocks:
-#             string_to_match = r'else\s*:'
-#
-#             rem = re.match(string_to_match, code[block[0] + offset:block[1] + offset])
-#
-#             if rem:
-#                 code_substr = re.sub(string_to_match, r'else {',
-#                                      code[block[0] + offset + rem.start():block[0] + offset + rem.end() + 1])
-#                 string_over = string_overwrite(code, rem.end() - rem.start(), rem.start() + block[0] + offset,
-#                                                code_substr)
-#                 offset += string_over[1]
-#
-#                 code = string_over[0]
-#                 code = insert_string(code, block[1] + offset, '\n}')
-#                 code = code.replace('{\n\n', '{\n')
-#                 offset += 1
-#     return code
+def convert_elses(code: str, else_blocks: list) -> str:
+    return convert_constructs(code, else_blocks, r'else\s*:', r'else {')
 
 
 def convert_defs(code: str) -> str:
@@ -266,7 +247,7 @@ def add_semicolons(code: str) -> str:
     return res
 
 
-def this_might_be_the_worst_crutch_every(these_blocks: list, those_blocks: list) -> list:
+def this_might_be_the_worst_crutch_ever(these_blocks: list, those_blocks: list) -> list:
     blocks_amt = len(these_blocks)
     for block in enumerate(reversed(these_blocks)):
         if block[1][3] != -1:
@@ -291,37 +272,25 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     add_hierarchy(if_blocks)
     for_blocks = find_all_blocks(code, 'for ')
     add_hierarchy(for_blocks)
+    else_blocks = find_all_blocks(code, 'else')
+    add_hierarchy(else_blocks)
 
-    # blocks_amt = len(if_blocks)
-    #
-    # for block in if_blocks:
-    #     print(block[3])
-    #
-    # for block in enumerate(reversed(if_blocks)):
-    #     if block[1][3] != -1:
-    #         parent_block_id = block[1][3]
-    #
-    #         parent_block = if_blocks[blocks_amt - parent_block_id - 1]
-    #         parent_start = parent_block[0]
-    #         parent_offset = parent_block[2]
-    #         for secondary_block in for_blocks:
-    #             if block[1][0] > secondary_block[0] > parent_start and secondary_block[1] > block[1][1] and secondary_block[2] <= parent_offset:
-    #                 if_blocks[blocks_amt - block[0] - 1][3] = -1
-    #
-    # print('-----------')
-    #
-    # for block in if_blocks:
-    #     print(block[3])
-
-    if_blocks = this_might_be_the_worst_crutch_every(if_blocks, [for_blocks])
+    if_blocks = this_might_be_the_worst_crutch_ever(if_blocks, [for_blocks, else_blocks])
 
     code = convert_defs(code)
     code = convert_ifs(code, if_blocks)
     for_blocks = find_all_blocks(code, 'for ')
     add_hierarchy(for_blocks)
+    else_blocks = find_all_blocks(code, 'else')
+    add_hierarchy(else_blocks)
+
+    for_blocks = this_might_be_the_worst_crutch_ever(for_blocks, [else_blocks])
+
     code = convert_fors(code, for_blocks)
 
-    # code = convert_elses(code)
+    else_blocks = find_all_blocks(code, 'else')
+    add_hierarchy(else_blocks)
+    code = convert_elses(code, else_blocks)
 
     code = code.replace('True', 'true')
     code = code.replace('False', 'false')
@@ -344,11 +313,15 @@ a = "if vl_dependentasdsd:\n"\
     "            if not thissss:\n"\
     "                myabstractionfails\n"\
     "            Acapulco niceties\n"\
+    "if van clif:\n"\
+    "   the sorry state of this affair\n"\
     "if tmp > 23:\n"\
     "    print('qqq')\n"\
     "for i in range(40000):\n"\
     "    if dau > tau:\n"\
     "        never even start\n"\
+    "    else:\n"\
+    "        lets try\n"\
     "    for nottobe in range(600):\n"\
     "        where does it end"
 print(a, '\n')
