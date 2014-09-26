@@ -114,21 +114,21 @@ def find_all_blocks(code: str, substring: str) -> list:
 
 
 def add_hierarchy(code_blocks: list) -> list:
-    min_indent = None
-    code_blocks_amt = len(code_blocks)
-
-    for block in code_blocks:
-        if min_indent is None or min_indent > block[2]:
-            min_indent = block[2]
-    for block in enumerate(reversed(code_blocks)):
-        if block[1][2] > min_indent:
-            cursor_pos = code_blocks_amt - block[0]
-            found_parent = False
-            while cursor_pos > 0 and not found_parent:
-                cursor_pos -= 1
-                if code_blocks[cursor_pos][2] < block[1][2]:
-                    code_blocks[code_blocks_amt - block[0] - 1][3] = cursor_pos
-                    found_parent = True
+    if code_blocks:
+        min_indent = None
+        code_blocks_amt = len(code_blocks)
+        for block in code_blocks:
+            if min_indent is None or min_indent > block[2]:
+                min_indent = block[2]
+        for block in enumerate(reversed(code_blocks)):
+            if block[1][2] > min_indent:
+                cursor_pos = code_blocks_amt - block[0]
+                found_parent = False
+                while cursor_pos > 0 and not found_parent:
+                    cursor_pos -= 1
+                    if code_blocks[cursor_pos][2] < block[1][2]:
+                        code_blocks[code_blocks_amt - block[0] - 1][3] = cursor_pos
+                        found_parent = True
 
 
 def convert_constructs(code: str, construct_blocks: list, string_to_match: str, replacement_string: str) -> str:
@@ -248,19 +248,20 @@ def add_semicolons(code: str) -> str:
 
 
 def this_might_be_the_worst_crutch_ever(these_blocks: list, those_blocks: list) -> list:
-    blocks_amt = len(these_blocks)
-    for block in enumerate(reversed(these_blocks)):
-        if block[1][3] != -1:
-            parent_block_id = block[1][3]
+    if these_blocks:
+        blocks_amt = len(these_blocks)
+        for block in enumerate(reversed(these_blocks)):
+            if block[1][3] != -1:
+                parent_block_id = block[1][3]
 
-            parent_block = these_blocks[blocks_amt - parent_block_id - 1]
-            parent_start = parent_block[0]
-            parent_offset = parent_block[2]
-            for that_block_blocks in those_blocks:
-                for that_block in that_block_blocks:
-                    if block[1][0] > that_block[0] > parent_start and that_block[1] > block[1][1]\
-                            and that_block[2] <= parent_offset:
-                        these_blocks[blocks_amt - block[0] - 1][3] = -1
+                parent_block = these_blocks[blocks_amt - parent_block_id - 1]
+                parent_start = parent_block[0]
+                parent_offset = parent_block[2]
+                for that_block_blocks in those_blocks:
+                    for that_block in that_block_blocks:
+                        if block[1][0] > that_block[0] > parent_start and that_block[1] > block[1][1]\
+                                and that_block[2] <= parent_offset:
+                            these_blocks[blocks_amt - block[0] - 1][3] = -1
 
     return these_blocks
 
@@ -303,27 +304,7 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     code = add_semicolons(code)
     return code
 
-a = "if vl_dependentasdsd:\n"\
-    "    print(f)\n"\
-    "    if 12345:\n"\
-    "        tmp -= 340000000\n"\
-    "        if failurtestingnoaaswatm:\n"\
-    "            z *= 5000\n"\
-    "            mydef = np.log(33333330)\n"\
-    "            if not thissss:\n"\
-    "                myabstractionfails\n"\
-    "            Acapulco niceties\n"\
-    "if van clif:\n"\
-    "   the sorry state of this affair\n"\
-    "if tmp > 23:\n"\
-    "    print('qqq')\n"\
-    "for i in range(40000):\n"\
-    "    if dau > tau:\n"\
-    "        never even start\n"\
-    "    else:\n"\
-    "        lets try\n"\
-    "    for nottobe in range(600):\n"\
-    "        where does it end"
+a = "def raw_min_dimensionless_vel_diss(T: float, molecule_vibr: float, molecule_diss: float, vl_dependent: bool=True) -> float:"
 print(a, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
