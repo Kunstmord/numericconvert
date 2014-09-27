@@ -64,7 +64,7 @@ def find_block(code: str, substring: str) -> list:
                 while flag:
                     curr_indent = 0
                     curr_pos = next_newline + 1
-                    while code[curr_pos] == ' ' and curr_pos <= code_len:
+                    while curr_pos < code_len and code[curr_pos] == ' ':
                         curr_pos += 1
                         curr_indent += 1
                     if curr_indent <= block_indent:
@@ -257,11 +257,13 @@ def this_might_be_the_worst_crutch_ever(these_blocks: list, those_blocks: list) 
                 parent_block = these_blocks[blocks_amt - parent_block_id - 1]
                 parent_start = parent_block[0]
                 parent_offset = parent_block[2]
-                for that_block_blocks in those_blocks:
-                    for that_block in that_block_blocks:
-                        if block[1][0] > that_block[0] > parent_start and that_block[1] > block[1][1]\
-                                and that_block[2] <= parent_offset:
-                            these_blocks[blocks_amt - block[0] - 1][3] = -1
+                if those_blocks:
+                    for that_block_blocks in those_blocks:
+                        if that_block_blocks:
+                            for that_block in that_block_blocks:
+                                if block[1][0] > that_block[0] > parent_start and that_block[1] > block[1][1]\
+                                        and that_block[2] <= parent_offset:
+                                    these_blocks[blocks_amt - block[0] - 1][3] = -1
 
     return these_blocks
 
@@ -304,7 +306,27 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     code = add_semicolons(code)
     return code
 
-a = "def raw_min_dimensionless_vel_diss(T: float, molecule_vibr: float, molecule_diss: float, vl_dependent: bool=True) -> float:"
+a = "if not center_of_mass:\n"\
+    "    if not nokt:\n"\
+    "        multiplier = constants.pi * (sigma ** 2) * ((constants.k * T / (2 * constants.pi * mass)) ** 0.5)\n"\
+    "    else:\n"\
+    "        multiplier = constants.pi * (sigma ** 2) * ((0.5 / (constants.pi * mass)) ** 0.5)\n"\
+    "    if deg == 0:\n"\
+    "        return 0.5 * multiplier * (min_sq + 1.0) * np.exp(-min_sq)\n"\
+    "    else:\n"\
+    "        min_g = min_sq ** 0.5\n"\
+    "        f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
+    "        if not nokt:\n"\
+    "            return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
+    "        else:\n"\
+    "            return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
+    "else:\n"\
+    "    min_g = min_sq ** 0.5\n"\
+    "    f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
+    "    if not nokt:\n"\
+    "        return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
+    "    else:\n"\
+    "        return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"
 print(a, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
