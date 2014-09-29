@@ -236,6 +236,8 @@ def convert_defs(code: str) -> str:
 
 def add_semicolons(code: str) -> str:
     res = ''
+    code = re.sub(r'\s+\n', r'\n', code)
+    code = re.sub(r'\s+$', r'', code)
     code_list = code.split('\n')
     for code_string in code_list:
         if not (code_string.endswith('}') or code_string.endswith('{')):
@@ -270,6 +272,8 @@ def this_might_be_the_worst_crutch_ever(these_blocks: list, those_blocks: list) 
 
 def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     code = re.sub(r'\\\s*\n\s*', ' ', code)
+    code = re.sub(r',\n\s*', ', ', code)
+    code = re.sub(r'\n\s*,', ', ', code)
 
     if_blocks = find_all_blocks(code, 'if ')
     add_hierarchy(if_blocks)
@@ -306,27 +310,29 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
     code = add_semicolons(code)
     return code
 
-a = "if not center_of_mass:\n"\
-    "    if not nokt:\n"\
-    "        multiplier = constants.pi * (sigma ** 2) * ((constants.k * T / (2 * constants.pi * mass)) ** 0.5)\n"\
-    "    else:\n"\
-    "        multiplier = constants.pi * (sigma ** 2) * ((0.5 / (constants.pi * mass)) ** 0.5)\n"\
-    "    if deg == 0:\n"\
-    "        return 0.5 * multiplier * (min_sq + 1.0) * np.exp(-min_sq)\n"\
-    "    else:\n"\
-    "        min_g = min_sq ** 0.5\n"\
-    "        f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
-    "        if not nokt:\n"\
-    "            return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
-    "        else:\n"\
-    "            return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
-    "else:\n"\
-    "    min_g = min_sq ** 0.5\n"\
-    "    f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
-    "    if not nokt:\n"\
-    "        return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
-    "    else:\n"\
-    "        return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"
+# a = "if not center_of_mass:\n"\
+#     "    if not nokt:\n"\
+#     "        multiplier = constants.pi * (sigma ** 2) * ((constants.k * T / (2 * constants.pi * mass)) ** 0.5)\n"\
+#     "    else:\n"\
+#     "        multiplier = constants.pi * (sigma ** 2) * ((0.5 / (constants.pi * mass)) ** 0.5)\n"\
+#     "    if deg == 0:\n"\
+#     "        return 0.5 * multiplier * (min_sq + 1.0) * np.exp(-min_sq)\n"\
+#     "    else:\n"\
+#     "        min_g = min_sq ** 0.5\n"\
+#     "        f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
+#     "        if not nokt:\n"\
+#     "            return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
+#     "        else:\n"\
+#     "            return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
+#     "else:\n"\
+#     "    min_g = min_sq ** 0.5\n"\
+#     "    f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
+#     "    if not nokt:\n"\
+#     "        return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
+#     "    else:\n"\
+#     "        return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"
+a = "def rec_rate_treanor_marrone_sts(T: float, model_data: np.ndarray, molecule: MoleculeSTS, atom1: Atom, atom2: Atom,\n"\
+    "                                 i: int, model: str='D6k') -> float:"
 print(a, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
