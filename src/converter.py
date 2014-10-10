@@ -3,6 +3,7 @@ import queue
 
 
 standard_mappings = {r'str': r'std::string', r'float': r'double'}
+forbidden_signs = {' ', '+', '-', '*', '/', ')', '(', '\n'}
 
 
 def right_bracket(snippet: str, starting_pos: int) -> str:
@@ -18,6 +19,40 @@ def insert_string(code: str, index: int, insertion_string: str) -> str:
     res += insertion_string
     res += code[index:]
     return res
+
+
+def find_non_bracket_expression(code: str, start_pos: int, direction: int) -> list:
+    end_pos = start_pos
+    code_len = len(code)
+    while 0 < end_pos < code_len - 1 and code[end_pos] not in forbidden_signs:
+        end_pos += direction
+    if code[end_pos] in forbidden_signs or code[end_pos] in {'(', ')'}:
+        end_pos -= direction
+    return [start_pos, end_pos]
+
+
+def convert_pows(code: str) -> str:
+    pow_operators = re.finditer(r'\s*\*\*\s*', code)
+    offset = 0
+    for pow_operator in pow_operators:
+        curr_start = pow_operator.start() + offset
+        curr_end = pow_operator.end() + offset
+        if code[curr_start - 1] != ')' and code[curr_end] != '(':
+            left_expr_pos = find_non_bracket_expression(code, curr_start - 1, -1)
+            right_expr_pos = find_non_bracket_expression(code, curr_end, 1)
+            original_len = right_expr_pos[1] - right_expr_pos[0] + left_expr_pos[0]\
+                           - left_expr_pos[1] + curr_end - curr_start + 2
+
+            if right_expr_pos[0] == right_expr_pos[1]:
+                right_snippet = code[right_expr_pos[0]]
+            else:
+                right_snippet = code[right_expr_pos[0]:right_expr_pos[1] + 1]
+            overwritten = string_overwrite(code, original_len,
+                                           left_expr_pos[1], 'pow(' + code[left_expr_pos[1]:left_expr_pos[0] + 1]
+                                           + ', ' + right_snippet + ')')
+            code = overwritten[0]
+            offset += overwritten[1]
+    return code
 
 
 def string_overwrite(code: str, original_len: int, index: int, replacement: str) -> list:
@@ -307,32 +342,33 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
 
     for alias in aliases:
         code = code.replace(alias + '.', '')
+
+    code = convert_pows(code)
     code = add_semicolons(code)
     return code
 
-# a = "if not center_of_mass:\n"\
-#     "    if not nokt:\n"\
-#     "        multiplier = constants.pi * (sigma ** 2) * ((constants.k * T / (2 * constants.pi * mass)) ** 0.5)\n"\
-#     "    else:\n"\
-#     "        multiplier = constants.pi * (sigma ** 2) * ((0.5 / (constants.pi * mass)) ** 0.5)\n"\
-#     "    if deg == 0:\n"\
-#     "        return 0.5 * multiplier * (min_sq + 1.0) * np.exp(-min_sq)\n"\
-#     "    else:\n"\
-#     "        min_g = min_sq ** 0.5\n"\
-#     "        f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
-#     "        if not nokt:\n"\
-#     "            return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
-#     "        else:\n"\
-#     "            return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
-#     "else:\n"\
-#     "    min_g = min_sq ** 0.5\n"\
-#     "    f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
-#     "    if not nokt:\n"\
-#     "        return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
-#     "    else:\n"\
-#     "        return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"
-a = "def rec_rate_treanor_marrone_sts(T: float, model_data: np.ndarray, molecule: MoleculeSTS, atom1: Atom, atom2: Atom,\n"\
-    "                                 i: int, model: str='D6k') -> float:"
+a = "if not center_of_mass:\n"\
+    "    if not nokt:\n"\
+    "        multiplier = constants.pi * (sigma ** 2) * ((constants.k * T / (2 * constants.pi * mass)) ** 0.5)\n"\
+    "    else:\n"\
+    "        multiplier = constants.pi * (sigma ** 2) * ((0.5 / (constants.pi * mass)) ** 0.5)\n"\
+    "    if deg == 0:\n"\
+    "        return 0.5 * multiplier * (min_sq + 1.0) * np.exp(-min_sq)\n"\
+    "    else:\n"\
+    "        min_g = min_sq ** 0.5\n"\
+    "        f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
+    "        if not nokt:\n"\
+    "            return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
+    "        else:\n"\
+    "            return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
+    "else:\n"\
+    "    min_g = min_sq ** 0.5\n"\
+    "    f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
+    "    if not nokt:\n"\
+    "        return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
+    "    else:\n"\
+    "        return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"
+# a = "min_g = 2.1 ** 2.7"
 print(a, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
