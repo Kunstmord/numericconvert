@@ -340,8 +340,8 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
         if aliases[alias] == 'scipy':
             code = code.replace(alias + '.special.gamma', 'tgamma')  # gamma is tgamma in C++  # custom function names here
 
-    for alias in aliases:
-        code = code.replace(alias + '.', '')
+    # for alias in aliases:
+    #     code = code.replace(alias + '.', '')
 
     code = convert_pows(code)
     code = add_semicolons(code)
@@ -358,17 +358,26 @@ a = "if not center_of_mass:\n"\
     "        min_g = min_sq ** 0.5\n"\
     "        f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
     "        if not nokt:\n"\
-    "            return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
-    "        else:\n"\
-    "            return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
-    "else:\n"\
-    "    min_g = min_sq ** 0.5\n"\
-    "    f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
+    "            return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"
+    # "        else:\n"\
+    # "            return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"
+    # "else:\n"\
+    # "    min_g = min_sq ** 0.5\n"\
+    # "    f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
+    # "    if not nokt:\n"\
+    # "        return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
+    # "    else:\n"\
+    # "        return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"
+b = "if not center_of_mass:\n"\
     "    if not nokt:\n"\
-    "        return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"\
+    "        a *= 2 ** 4\n"\
+    "        if a<5:\n"\
+    "            multiplier = constants.pi * (sigma ** 2) * ((0.5 / (constants.pi * mass)) ** 0.5)\n"\
+    "    if deg == 0:\n"\
+    "        return 0.5 * multiplier * (min_sq + 1.0) * np.exp(-min_sq ** min_pow)\n"\
     "    else:\n"\
-    "        return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"
-# a = "min_g = 2.1 ** 2.7"
-print(a, '\n')
+    "        min_g = min_sq ** 0.5\n"\
+
+print(b, '\n')
 print('=======New=======')
 print(basic_convert(a, {'np': 'numpy', 'scipy': 'scipy'}))
