@@ -340,25 +340,19 @@ def basic_convert(code: str, aliases: dict, custom_mappings: dict=None) -> str:
         if aliases[alias] == 'scipy':
             code = code.replace(alias + '.special.gamma', 'tgamma')  # gamma is tgamma in C++  # custom function names here
 
-    # for alias in aliases:
-    #     code = code.replace(alias + '.', '')
+    for alias in aliases:
+        code = code.replace(alias + '.', '')
 
     code = convert_pows(code)
     code = add_semicolons(code)
     return code
 
-a = "if not center_of_mass:\n"\
-    "    if not nokt:\n"\
-    "        multiplier = constants.pi * (sigma ** 2) * ((constants.k * T / (2 * constants.pi * mass)) ** 0.5)\n"\
-    "    else:\n"\
-    "        multiplier = constants.pi * (sigma ** 2) * ((0.5 / (constants.pi * mass)) ** 0.5)\n"\
-    "    if deg == 0:\n"\
-    "        return 0.5 * multiplier * (min_sq + 1.0) * np.exp(-min_sq)\n"\
-    "    else:\n"\
-    "        min_g = min_sq ** 0.5\n"\
-    "        f = lambda g: raw_crosssection_diss_rigid_sphere(g, T, sigma, molecule_vibr, molecule_diss, center_of_mass, vl_dependent) * (g ** (3.0 + 2.0 * deg)) * np.exp(-g ** 2)\n"\
-    "        if not nokt:\n"\
-    "            return ((constants.k * T / (2 * constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"
+a = "if center_of_mass:\n"\
+    "    dostuff()\n"\
+    "else:\n"\
+    "    nokt = rand\n"\
+    "    if nokt:\n"\
+    "        return 1"
     # "        else:\n"\
     # "            return ((0.5 / (constants.pi * mass)) ** 0.5) * integrate.quad(f, min_g, np.inf)[0]\n"
     # "else:\n"\
